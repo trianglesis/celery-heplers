@@ -14,8 +14,8 @@ Type=forking
 User=user
 Group=celery
 EnvironmentFile=-/etc/default/celeryd.conf
-WorkingDirectory=/var/www/octopus
-ExecStart=/bin/sh -c '/var/www/octopus/octo/bin/celery beat -A ${CELERY_APP} --detach \
+WorkingDirectory=/var/www/web_app_dir
+ExecStart=/bin/sh -c '/var/www/web_app_dir/web_app/bin/celery beat -A ${CELERY_APP} --detach \
  --pidfile=${CELERYBEAT_PID_FILE} \
  --logfile=${CELERYBEAT_LOG_FILE} \
  --loglevel=${CELERYBEAT_LOG_LEVEL} \
@@ -25,7 +25,3 @@ RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
-
-# ExecStart=/var/www/octopus/octo/bin/celery beat -A ${CELERY_APP} --detach \
-# ExecStart=/var/www/octopus/octo/bin/celery beat -A config \
-
