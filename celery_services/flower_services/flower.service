@@ -1,0 +1,23 @@
+# ========================================
+# vi /etc/systemd/system/flower.service
+# systemctl daemon-reload
+# systemctl restart flower.service
+# ========================================
+
+[Unit]
+Description=Flower Celery Service
+
+[Service]
+User=user
+Group=apache
+
+#WorkingDirectory=/var/www/octopus/octo
+WorkingDirectory=/var/www/octopus
+
+ExecStart=/bin/sh -c '/var/www/octopus/octo/bin/celery flower --broker=amqp://user:passwd@localhost:5672/tentacle --broker_api=http://user:passwd@localhost:15672/api/'
+Restart=on-failure
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
+
