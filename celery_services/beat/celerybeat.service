@@ -1,0 +1,31 @@
+# ========================================
+# /etc/default/celeryd.conf
+# /etc/systemd/system/celerybeat.service
+# systemctl daemon-reload
+# systemctl restart celerybeat.service
+# ========================================
+
+[Unit]
+Description=Celery beat
+After=network.target
+
+[Service]
+Type=forking
+User=user
+Group=celery
+EnvironmentFile=-/etc/default/celeryd.conf
+WorkingDirectory=/var/www/octopus
+ExecStart=/bin/sh -c '/var/www/octopus/octo/bin/celery beat -A ${CELERY_APP} --detach \
+ --pidfile=${CELERYBEAT_PID_FILE} \
+ --logfile=${CELERYBEAT_LOG_FILE} \
+ --loglevel=${CELERYBEAT_LOG_LEVEL} \
+ --schedule=${CELERYBEATD_SHEDULE_FILE} ${CELERYBEAT_OPTS}'
+ExecStop=/bin/systemctl kill celerybeat.service
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+
+# ExecStart=/var/www/octopus/octo/bin/celery beat -A ${CELERY_APP} --detach \
+# ExecStart=/var/www/octopus/octo/bin/celery beat -A config \
+
