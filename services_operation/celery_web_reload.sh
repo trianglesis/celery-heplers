@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-OCTO_PATH="/var/www/appdir"
+OCTO_PATH="/var/www/web_app_dir"
 OCTO_BIN="/app/bin"
 LOG="/var/log/appdir/RESTART.log"
 touch ${LOG}
