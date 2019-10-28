@@ -11,12 +11,13 @@ Description=Flower Celery Service
 User=user
 Group=apache
 
-#WorkingDirectory=/var/www/web_app_dir/web_app
-WorkingDirectory=/var/www/web_app_dir
+#WorkingDirectory=/var/www/octopus/octo
+WorkingDirectory=/var/www/octopus
 
-ExecStart=/bin/sh -c '/var/www/web_app_dir/web_app/bin/celery flower --broker=amqp://user:passwd@localhost:5672/mq_vhost --broker_api=http://user:passwd@localhost:15672/api/'
+ExecStart=/bin/sh -c '/var/www/octopus/venv/bin/celery flower --broker=amqp://octo_user:hPoNaEb7@localhost:5672/tentacle --broker_api=http://octo_user:hPoNaEb7@localhost:15672/api/'
 Restart=on-failure
 Type=simple
 
 [Install]
 WantedBy=multi-user.target
+
