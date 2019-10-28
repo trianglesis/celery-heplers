@@ -14,7 +14,7 @@ Group=apache
 #WorkingDirectory=/var/www/octopus/octo
 WorkingDirectory=/var/www/octopus
 
-ExecStart=/bin/sh -c '/var/www/octopus/venv/bin/celery flower --broker=amqp://octo_user:hPoNaEb7@localhost:5672/tentacle --broker_api=http://octo_user:hPoNaEb7@localhost:15672/api/'
+ExecStart=/bin/sh -c '/var/www/octopus/venv/bin/celery flower --broker=amqp://octo_user:pass@localhost:5672/tentacle --broker_api=http://octo_user:pass@localhost:15672/api/'
 Restart=on-failure
 Type=simple
 
