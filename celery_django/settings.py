@@ -14,7 +14,8 @@ import os
 import sys
 import logging
 import socket
-from octo.config_cred import cred
+from octo.config_cred import cred, mails, ADMINS
+
 log = logging.getLogger("octo.octologger")
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -29,16 +30,39 @@ sys.path.insert(0, os.path.join(BASE_DIR, 'octo'))
 # noinspection SpellCheckingInspection
 SECRET_KEY = cred['SECRET_KEY']
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
 CURR_HOSTNAME = socket.getfqdn()
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-INTERNAL_IPS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', CURR_HOSTNAME, socket.getfqdn(), socket.gethostbyname(socket.gethostname()),
+                 socket.gethostname()]
+
+# SECURITY WARNING: don't run with debug turned on in production!
+if cred['LOBSTER_SITE_DOMAIN'] in ALLOWED_HOSTS:
+    INTERNAL_IPS = ['127.0.0.1']  # For django debug cons
+    DEBUG = True
+    DEV = False
+    DEBUG_TOOLBAR_PANELS = [
+        'debug_toolbar.panels.versions.VersionsPanel',
+        'debug_toolbar.panels.timer.TimerPanel',
+        'debug_toolbar.panels.settings.SettingsPanel',
+        'debug_toolbar.panels.headers.HeadersPanel',
+        'debug_toolbar.panels.request.RequestPanel',
+        'debug_toolbar.panels.sql.SQLPanel',
+        'debug_toolbar.panels.staticfiles.StaticFilesPanel',
+        'debug_toolbar.panels.templates.TemplatesPanel',
+        'debug_toolbar.panels.cache.CachePanel',
+        'debug_toolbar.panels.signals.SignalsPanel',
+        'debug_toolbar.panels.logging.LoggingPanel',
+        'debug_toolbar.panels.redirects.RedirectsPanel',
+        'debug_toolbar.panels.profiling.ProfilingPanel',
+    ]
+    log.debug(f"Debug mode is active on Lobster hosts! {ALLOWED_HOSTS}")
+else:
+    DEBUG = False
+    DEV = False
+
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 
 # Application definition
 INSTALLED_APPS = [
-    # 'django_celery_results',  # Disable if result_backend = 'django-db'
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -48,7 +72,8 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'rest_framework',
     'rest_framework.authtoken',
-    'rest_auth',
+    'debug_toolbar',
+    # 'rest_auth',
     'django_celery_beat',
     'octo',
     'octo_adm',
@@ -56,9 +81,11 @@ INSTALLED_APPS = [
     'octo_tku_upload',
     'octo_tku_patterns',
     'dev_site',
+    'django_ftpserver',
 ]
 
 MIDDLEWARE = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -66,7 +93,19 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 ]
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.memcached.MemcachedCache',
+        'LOCATION': '127.0.0.1:11211',
+        'TIMEOUT': 60 * 60 * 5,
+        'OPTIONS': {
+            'server_max_value_length': 1024 * 1024 * 10,
+        }
+    }
+}
 
 ROOT_URLCONF = 'octo.urls'
 
@@ -82,7 +121,6 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.static',
-                'django.template.context_processors.debug',
             ],
         },
     },
@@ -106,6 +144,7 @@ DATABASES = {
         'CONN_MAX_AGE': 3600,
         'OPTIONS': {
             'read_default_file': '/etc/my.cnf',
+            # 'read_default_file': '/etc/my.cnf.d/win_mysql.cnf',
             # 'init_command': 'SET default_storage_engine=INNODB;'
             # 'init_command': 'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED',
             # 'init_command': 'SET default_storage_engine=INNODB',
@@ -113,11 +152,10 @@ DATABASES = {
     }
 }
 
-# STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 STATICFILES_DIRS = (
-    'static',
-    os.path.join('static', 'admin'),
+    os.path.join(STATIC_ROOT, 'admin'),
 )
 
 # Password validation
@@ -149,10 +187,9 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    'PAGE_SIZE': 500,
 
 }
-
 
 # https://docs.djangoproject.com/en/2.0/topics/email/
 EMAIL_HOST = cred['EMAIL_HOST']
@@ -160,19 +197,14 @@ EMAIL_HOST = cred['EMAIL_HOST']
 # Mail addr:
 if cred['LOBSTER_HOST'] in CURR_HOSTNAME:
     EMAIL_ADDR = cred['LOBSTER_EMAIL_ADDR']
-elif cred['OCTOPUS_HOST'] in CURR_HOSTNAME:
-    EMAIL_ADDR = cred['OCTOPUS_EMAIL_ADDR']
-else:
-    EMAIL_ADDR = cred['LOCAL_EMAIL_ADDR']
-
-# Site domain:
-if cred['LOBSTER_HOST'] in CURR_HOSTNAME:
     SITE_DOMAIN = cred['LOBSTER_SITE_DOMAIN']
     SITE_SHORT_NAME = cred['LOBSTER_SITE_SHORT_NAME']
 elif cred['OCTOPUS_HOST'] in CURR_HOSTNAME:
+    EMAIL_ADDR = cred['OCTOPUS_EMAIL_ADDR']
     SITE_DOMAIN = cred['OCTOPUS_SITE_DOMAIN']
     SITE_SHORT_NAME = cred['OCTOPUS_SITE_SHORT_NAME']
 else:
+    EMAIL_ADDR = cred['LOCAL_EMAIL_ADDR']
     SITE_DOMAIN = '127.0.0.1:8000'
     SITE_SHORT_NAME = 'LocalHost'
 
@@ -193,7 +225,6 @@ USE_L10N = True
 
 USE_TZ = True
 
-
 # https://github.com/maxtepkeev/architect/issues/38
 # https://github.com/celery/django-celery/issues/359
 CONN_MAX_AGE = None
@@ -203,18 +234,4 @@ CONN_MAX_AGE = None
 
 STATIC_URL = '/static/'
 
-MEDIA_URL = '/upload/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'upload')
-
-# # DEBUG OPT:
-# if os.name == "nt":
-#     log.debug("=========================================================")
-#     log.debug("PROJECT_ROOT:     %s", PROJECT_ROOT)
-#     log.debug("BASE DIR:         %s", BASE_DIR)
-#     log.debug("=========================================================")
-#     log.debug("TEMPLATES:        %s", TEMPLATES[0]['DIRS'][0])
-#     log.debug("Static root:      %s", "/static/ - str")
-#     log.debug("=========================================================")
-#     log.debug("SYS PATH: %s", sys.path)
-#     log.debug("=========================================================")
-#     log.debug("STATICFILES_DIRS: %s", STATICFILES_DIRS)
+ADMINS = ADMINS
