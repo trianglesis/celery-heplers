@@ -1,0 +1,18 @@
+Windows_virtual_env
+
+# BEAT:
+win_venv\Scripts\activate.bat && celery -A octo.octo_celery:app beat --schedule=django_celery_beat.schedulers:DatabaseScheduler
+
+# Workers
+
+# I don't remember why I use eventlet here. but it should work
+win_venv\Scripts\activate.bat && celery -A octo.octo_celery:app worker --pool=eventlet --loglevel=ERROR --concurrency=1 -E -n alpha@tentacle
+
+# Just a regular way for local win machine, for dev and debug:
+win_venv\Scripts\activate.bat && celery -A octo.octo_celery:app worker --loglevel=ERROR --concurrency=1 -E -n alpha@tentacle --logfile=alpha.log
+
+
+<==Celery WIN==> Will "beat" celery workers:
+        ['w_development@tentacle', 'w_tku_upload@tentacle', 'w_deploy@tentacle', 'w_parsing@tentacle', 'w_routines@tentacle', 'alpha@tentacle', 'beta@tentacle', 'charlie@tentacle', 'delta@tentacle', 'echo@tentacle', 'foxtrot@tentacle', 'golf@tentacle', 'hotel@tentacle', 'india@tentacle', 'juliett@tentacle', 'kilo@tentacle', 'lima@tentacle', 'mike@tentacle', 'november@tentacle', 'oscar@tentacle', 'papa@tentacle', 'quebec@tentacle', 'romeo@tentacle']
+<==Celery WIN==> Composed command list: ['win_venv\\Scripts\\activate.bat && celery -A octo.octo_celery:app beat --loglevel=DEBUG --logfile=Y_log\\beat.log --schedule=django_celery_beat.schedulers:DatabaseScheduler']
+<==Celery WIN==> Run: win_venv\Scripts\activate.bat && celery -A octo.octo_celery:app beat --loglevel=DEBUG --logfile=Y_log\beat.log --schedule=django_celery_beat.schedulers:DatabaseScheduler
