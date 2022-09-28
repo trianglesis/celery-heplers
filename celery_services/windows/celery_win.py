@@ -1,8 +1,8 @@
 import argparse
 import os
 import subprocess
-from queue import Queue
-from threading import Thread
+import atexit
+from multiprocessing.pool import ThreadPool
 from time import time
 
 
@@ -19,35 +19,39 @@ workers - list of ALL workers you may need, for keeping CMD line shorter
 
 ENV = f'win_venv{os.sep}Scripts{os.sep}activate.bat'
 APP = 'octo.octo_celery:app'
-LOG_PATH = 'Y_log'
+LOG_PATH = f'Y_log{os.sep}celery'
 
 SCHEDULE = '--schedule=django_celery_beat.schedulers:DatabaseScheduler'
 
 workers = [
-    "w_development@tentacle",
-    "w_tku_upload@tentacle",
-    'w_deploy@tentacle',
-    "w_parsing@tentacle",
-    "w_routines@tentacle",
-    "alpha@tentacle",
-    "beta@tentacle",
-    "charlie@tentacle",
-    "delta@tentacle",
-    "echo@tentacle",
-    "foxtrot@tentacle",
-    "golf@tentacle",
-    'hotel@tentacle',
-    'india@tentacle',
-    'juliett@tentacle',
-    'kilo@tentacle',
-    'lima@tentacle',
-    'mike@tentacle',
-    'november@tentacle',
-    'oscar@tentacle',
-    'papa@tentacle',
-    'quebec@tentacle',
-    'romeo@tentacle',
+    # "w_development",
+    # "w_tku_upload",
+    # 'w_deploy',
+    "w_parsing",
+    "w_routines",
+    "alpha",
+    "beta",
+    # "charlie",
+    # "delta",
+    # "echo",
+    # "foxtrot",
+    # "golf",
+    # 'hotel',
+    # 'india',
+    'juliett',
+    'kilo',
+    # 'lima',
+    # 'mike',
+    # 'november',
+    # 'oscar',
+    # 'papa',
+    # 'quebec',
+    # 'romeo',
 ]
+
+
+def kill_runner(runner):
+    runner.terminate()
 
 
 def th_run(args):
@@ -66,6 +70,12 @@ def th_run(args):
 
     if log_level == 'DEBUG':
         print(f'<==Celery WIN==> Will "{mode}" celery workers:\n\t{worker_list}')
+
+    if args.wipe_logs:
+        if log_level == 'DEBUG':
+            print(f'<==Celery WIN==> Will wipe all previously generated logs.')
+            for worker in worker_list:
+                os.remove(f'{LOG_PATH}{os.sep}{worker}.log')
 
     cmd_list = []
     # Start or stop or kill list of workers:
@@ -88,32 +98,33 @@ def th_run(args):
 
     # Now run commands each in separate thread
     ts = time()
-    thread_list = []
-    th_out = []
-    queue = Queue()
+    # As many as workers we have
+    pool = ThreadPool(processes=len(cmd_list))
+
+    def kill_pool(err_msg):
+        print(err_msg)
+        pool.terminate()
 
     for cmd in cmd_list:
         if log_level == 'DEBUG':
             print(f"<==Celery WIN==> Run: {cmd}")
-        th_name = f"Run CMD: {cmd}"
-        try:
-            test_thread = Thread(target=workers_run, name=th_name, kwargs=dict(cmd=cmd, queue=queue, cwd=os.path.dirname(os.path.realpath(__file__))))
-            test_thread.start()
-            thread_list.append(test_thread)
-        except Exception as e:
-            msg = "Thread fail with error: {}".format(e)
-            print(msg)
-            return msg
-    # Execute threads:
-    for th in thread_list:
-        th.join()
-        th_out.append(queue.get())
-    print(f'All run Took {time() - ts} Out {th_out}')
+
+        pool.apply_async(workers_run,
+                         kwds=dict(cmd=cmd, cwd=os.path.dirname(os.path.realpath(__file__))),
+                         error_callback=kill_pool)
+
+    pool.close()
+    pool.join()
+    pool.terminate()
+
+    atexit.register(kill_runner, workers_run)
+    exit()
+
+    print(f'All run Took {time() - ts}')
 
 
 def workers_run(**kwargs):
     cmd = kwargs.get('cmd')
-    queue = kwargs.get('queue')
     cwd = kwargs.get('cwd')
     my_env = os.environ.copy()
     run_results = []
@@ -129,10 +140,8 @@ def workers_run(**kwargs):
         stdout, stderr = run_cmd.communicate()
         stdout, stderr = stdout.decode('utf-8'), stderr.decode('utf-8')
         run_results.append({'stdout': stdout, 'stderr': stderr})
-        queue.put(run_results)
     except Exception as e:
         msg = f"<==Celery WIN==> Error during operation for: {cmd} {e}"
-        queue.put(msg)
         print(msg)
 
 
@@ -141,6 +150,7 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--mode', choices=['start', 'beat'], required=True)
     parser.add_argument('-w', '--worker', action='append')
     parser.add_argument('-l', '--log_level', choices=['DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'])
+    parser.add_argument('--wipe_logs', action='store_true', help='Wipe previously generated logs content')
     th_run(parser.parse_args())
 
 
@@ -151,10 +161,13 @@ Exit or kill by Ctrl+C and that's all.
 Start beat only (only as separate console or instance):
 python celery_win.py --mode=beat
 
-Start ALL workers available: 
+Start ALL workers available:
+python celery_win.py --mode=start --log_level=DEBUG --wipe_logs
 python celery_win.py --mode=start --log_level=DEBUG
+python celery_win.py --mode=start --log_level=INFO
 
 Start only few workers:
+python celery_win.py --mode=start --worker=alpha --log_level=DEBUG
 python celery_win.py --mode=start --worker=alpha --worker=beta --log_level=DEBUG
 
 """
