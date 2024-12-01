@@ -11,6 +11,10 @@ I'm coding on WIN machine with WSL 1 support.
 I's a pain to run dev services on WIN enviroment, expecially for celery, so I moved to Centos under WSL.
 Here are some examples of config and service manage.
 
+Last setup: 
+- [Readme](django/README.md)
+
+
 Feel free to use this setup as refference.
 
 
